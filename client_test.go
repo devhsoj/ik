@@ -6,6 +6,9 @@ import (
 	"testing"
 )
 
+var event = "echo"
+var data = []byte("Hello, world!")
+
 func TestClient_Connect(t *testing.T) {
 	client := ik.NewClient(addr)
 
@@ -17,8 +20,14 @@ func TestClient_Connect(t *testing.T) {
 func TestClient_Send(t *testing.T) {
 	client := ik.NewClient(addr)
 
-	if err := client.Send("ping", []byte("pong")); err != nil {
+	res, err := client.Send(event, data)
+
+	if err != nil {
 		t.Fatal(err)
+	}
+
+	if !bytes.Equal(res, data) {
+		t.Fatal("data mismatch")
 	}
 }
 
@@ -32,10 +41,8 @@ func BenchmarkClient_Send(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	var data = bytes.Repeat([]byte{'x'}, 1_024)
-
 	for b.Loop() {
-		if err := client.Send("random", data); err != nil {
+		if _, err := client.Send(event, data); err != nil {
 			b.Fatal(err)
 		}
 	}

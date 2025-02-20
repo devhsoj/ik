@@ -11,6 +11,11 @@ import (
 
 type Server struct {
 	l net.Listener
+	e EventHandlerMap
+}
+
+func (s *Server) Register(event string, handler EventHandler) {
+	s.e.Register(event, handler)
 }
 
 func (s *Server) handleConn(conn net.Conn) error {
@@ -21,6 +26,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 	var err error
 
 	r := bufio.NewReader(conn)
+	w := bufio.NewWriter(conn)
 
 	for {
 		_, event, dataLength, err = readPacketMetadata(r)
@@ -40,7 +46,27 @@ func (s *Server) handleConn(conn net.Conn) error {
 			break
 		}
 
-		fmt.Println(event, dataLength == len(data))
+		handler, ok := s.e[event]
+
+		if !ok {
+			err = errors.New(fmt.Sprintf("ik: event: '%s' not registered", event))
+			break
+		}
+
+		res := handler(data)
+		resMetadata := craftPacketMetadata(ProtoVersion, event, len(res))
+
+		if _, err = w.Write(resMetadata); err != nil {
+			break
+		}
+
+		if _, err = w.Write(res); err != nil {
+			break
+		}
+
+		if err = w.Flush(); err != nil {
+			break
+		}
 	}
 
 	return err
@@ -75,5 +101,7 @@ func (s *Server) Listen(addr string) error {
 }
 
 func NewServer() *Server {
-	return &Server{}
+	return &Server{
+		e: make(EventHandlerMap),
+	}
 }
