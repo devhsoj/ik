@@ -39,7 +39,7 @@ func BenchmarkClient_Send(b *testing.B) {
 	var data = bytes.Repeat([]byte{'x'}, 1_024)
 
 	for b.Loop() {
-		if err := client.Send("huge", data); err != nil {
+		if err := client.Send("random", data); err != nil {
 			b.Fatal(err)
 		}
 	}

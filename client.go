@@ -11,12 +11,18 @@ type Client struct {
 	w    *bufio.Writer
 }
 
-func (c *Client) Send(commandName string, data []byte) error {
-	if len(commandName) >= 65_535 {
-		commandName = commandName[:65_535]
+func (c *Client) Send(event string, data []byte) error {
+	if c.conn == nil {
+		if err := c.Connect(); err != nil {
+			return err
+		}
 	}
 
-	buf := craftPacketMetadata(ProtoVersion, commandName, len(data))
+	if len(event) >= 65_535 {
+		event = event[:65_535]
+	}
+
+	buf := craftPacketMetadata(ProtoVersion, event, len(data))
 
 	if _, err := c.w.Write(buf); err != nil {
 		return err

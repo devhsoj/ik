@@ -14,8 +14,7 @@ type Server struct {
 }
 
 func (s *Server) handleConn(conn net.Conn) error {
-	var version byte
-	var commandName string
+	var event string
 	var dataLength int
 
 	var n int
@@ -24,7 +23,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 	r := bufio.NewReader(conn)
 
 	for {
-		version, commandName, dataLength, err = readPacketMetadata(r)
+		_, event, dataLength, err = readPacketMetadata(r)
 
 		if err != nil {
 			break
@@ -41,7 +40,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 			break
 		}
 
-		fmt.Println(version, commandName, dataLength == len(data))
+		fmt.Println(event, dataLength == len(data))
 	}
 
 	return err
