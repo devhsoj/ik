@@ -17,10 +17,6 @@ func TestClient_Connect(t *testing.T) {
 func TestClient_Send(t *testing.T) {
 	client := ik.NewClient(addr)
 
-	if err := client.Connect(); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := client.Send("ping", []byte("pong")); err != nil {
 		t.Fatal(err)
 	}
