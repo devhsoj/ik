@@ -37,7 +37,7 @@ func readPacketMetadata(r *bufio.Reader) (version byte, commandName string, data
 	}
 
 	if version != ProtoVersion {
-		return 0, "", 0, fmt.Errorf("invalid packet version: %d", version)
+		return 0, "", 0, fmt.Errorf("ik: invalid version in packet metadata: %d", version)
 	}
 
 	if _, err = io.ReadFull(r, commandNameLengthBuf); err != nil {
