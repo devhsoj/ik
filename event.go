@@ -1,6 +1,6 @@
 package ik
 
-type EventHandler = func(data []byte) []byte
+type EventHandler = func(c *ServerClient, data []byte) []byte
 
 type EventHandlerMap map[string]EventHandler
 

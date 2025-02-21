@@ -18,7 +18,7 @@ func TestServer_Listen(t *testing.T) {
 func TestServer_Register(t *testing.T) {
 	server := ik.NewServer()
 
-	server.Register("echo", func(data []byte) []byte {
+	server.Register("echo", func(c *ik.ServerClient, data []byte) []byte {
 		return data
 	})
 

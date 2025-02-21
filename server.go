@@ -3,11 +3,53 @@ package ik
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
 )
+
+var ErrDataMismatch = errors.New("ik: invalid data sent")
+var ErrEventNotRegistered = errors.New("ik: event not registered")
+
+type ServerClient struct {
+	c net.Conn
+	r *bufio.Reader
+	w *bufio.Writer
+}
+
+func (s *ServerClient) Send(event string, data []byte) error {
+	return sendPacket(s.w, ProtoVersion, event, data)
+}
+
+func (s *ServerClient) Receive() (event string, data []byte, err error) {
+	var dataLength, n int
+
+	_, event, dataLength, err = readPacketMetadata(s.r)
+
+	if err != nil {
+		return "", nil, err
+	}
+
+	data = make([]byte, dataLength)
+
+	if n, err = io.ReadFull(s.r, data); err != nil {
+		return "", nil, err
+	}
+
+	if n != dataLength {
+		err = ErrDataMismatch
+	}
+
+	return event, data, nil
+}
+
+func NewServerClient(c net.Conn) *ServerClient {
+	return &ServerClient{
+		c: c,
+		r: bufio.NewReader(c),
+		w: bufio.NewWriter(c),
+	}
+}
 
 type Server struct {
 	l net.Listener
@@ -19,48 +61,27 @@ func (s *Server) Register(event string, handler EventHandler) {
 }
 
 func (s *Server) handleConn(conn net.Conn) error {
-	var event string
-	var dataLength int
-
-	var n int
-	var err error
-
-	r := bufio.NewReader(conn)
-	w := bufio.NewWriter(conn)
+	client := NewServerClient(conn)
 
 	for {
-		_, event, dataLength, err = readPacketMetadata(r)
+		event, data, err := client.Receive()
 
 		if err != nil {
-			break
-		}
-
-		data := make([]byte, dataLength)
-
-		if n, err = io.ReadFull(r, data); err != nil {
-			break
-		}
-
-		if n != dataLength {
-			err = errors.New("ik: invalid data sent")
-			break
+			return err
 		}
 
 		handler, ok := s.e[event]
 
 		if !ok {
-			err = errors.New(fmt.Sprintf("ik: event: '%s' not registered", event))
-			break
+			return ErrEventNotRegistered
 		}
 
-		res := handler(data)
+		res := handler(client, data)
 
-		if err = sendPacket(w, ProtoVersion, event, res); err != nil {
-			break
+		if err = client.Send(event, res); err != nil {
+			return err
 		}
 	}
-
-	return err
 }
 
 func (s *Server) serve() error {
