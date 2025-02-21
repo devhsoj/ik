@@ -54,17 +54,8 @@ func (s *Server) handleConn(conn net.Conn) error {
 		}
 
 		res := handler(data)
-		resMetadata := craftPacketMetadata(ProtoVersion, event, len(res))
 
-		if _, err = w.Write(resMetadata); err != nil {
-			break
-		}
-
-		if _, err = w.Write(res); err != nil {
-			break
-		}
-
-		if err = w.Flush(); err != nil {
+		if err = sendPacket(w, ProtoVersion, event, res); err != nil {
 			break
 		}
 	}

@@ -22,21 +22,7 @@ func (c *Client) Send(event string, data []byte) ([]byte, error) {
 		}
 	}
 
-	if len(event) >= 65_535 {
-		event = event[:65_535]
-	}
-
-	buf := craftPacketMetadata(ProtoVersion, event, len(data))
-
-	if _, err := c.w.Write(buf); err != nil {
-		return nil, err
-	}
-
-	if _, err := c.w.Write(data); err != nil {
-		return nil, err
-	}
-
-	if err := c.w.Flush(); err != nil {
+	if err := sendPacket(c.w, ProtoVersion, event, data); err != nil {
 		return nil, err
 	}
 
@@ -50,8 +36,7 @@ func (c *Client) Send(event string, data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	buf = nil
-	buf = make([]byte, dataLength)
+	buf := make([]byte, dataLength)
 
 	if _, err = io.ReadFull(c.r, buf); err != nil {
 		return nil, err

@@ -10,6 +10,10 @@ import (
 const ProtoVersion byte = 1
 
 func craftPacketMetadata(version byte, event string, dataLength int) []byte {
+	if len(event) >= 65_535 {
+		event = event[:65_535]
+	}
+
 	buf := make([]byte, 1+2+len(event)+4)
 
 	buf[0] = version
@@ -57,4 +61,18 @@ func readPacketMetadata(r *bufio.Reader) (version byte, event string, dataLength
 	dataLength_, _ = binary.Varint(dataLengthBuf)
 
 	return version, string(eventBuf), int(dataLength_), nil
+}
+
+func sendPacket(w *bufio.Writer, version byte, event string, data []byte) error {
+	buf := craftPacketMetadata(version, event, len(data))
+
+	if _, err := w.Write(buf); err != nil {
+		return nil
+	}
+
+	if _, err := w.Write(data); err != nil {
+		return nil
+	}
+
+	return w.Flush()
 }
