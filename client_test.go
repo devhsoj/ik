@@ -2,8 +2,10 @@ package ik_test
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/devhsoj/ik"
 	"testing"
+	"time"
 )
 
 var event = "echo"
@@ -28,6 +30,22 @@ func TestClient_Send(t *testing.T) {
 
 	if !bytes.Equal(res, data) {
 		t.Fatal("data mismatch")
+	}
+}
+
+func TestClient_Subscribe(t *testing.T) {
+	client := ik.NewClient(addr)
+
+	if err := client.Subscribe("subscribe", nil, func(data []byte) {
+		fmt.Println(string(data))
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(time.Second * 10)
+
+	if err := client.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 
