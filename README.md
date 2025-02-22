@@ -1,3 +1,3 @@
 # ik
 
-ik is a simple, high performance protocol built on top of TCP.
+ik is a simple, high performance TCP protocol that allows for swift development and performance.
