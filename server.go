@@ -53,7 +53,7 @@ func NewServerClient(c net.Conn) *ServerClient {
 
 type Server struct {
 	l net.Listener
-	e EventHandlerMap
+	e eventHandlerMap
 }
 
 func (s *Server) Register(event string, handler EventHandler) {
@@ -114,6 +114,6 @@ func (s *Server) Listen(addr string) error {
 
 func NewServer() *Server {
 	return &Server{
-		e: make(EventHandlerMap),
+		e: make(eventHandlerMap),
 	}
 }
