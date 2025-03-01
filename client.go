@@ -2,6 +2,7 @@ package ik
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -15,8 +16,7 @@ type Client struct {
 	r    *bufio.Reader
 	mu   sync.Mutex
 
-	subscribed       chan bool
-	streamBufferSize int
+	subscribed chan bool
 }
 
 // sendEvent makes sure the Client is connected, then sends the passed event and data via sendPacket.
@@ -96,12 +96,31 @@ func (c *Client) Subscribe(event string, data []byte, handler func(data []byte))
 	return nil
 }
 
+type ClientStreamOptions struct {
+	// Event is the event to specify this stream for.
+	Event string
+	// Reader is the reader that will stream to the Server the Client is connected to.
+	Reader io.Reader
+	// ReadBufferSize is the read buffer size used to created buffered reads for streams. Defaults to 1 KiB.
+	ReadBufferSize int
+	// Handler is a function that is called when a response is received from the Server the Client is streaming to.
+	Handler func(data []byte)
+}
+
 // Stream pipes data read from the passed reader to the Server the Client is connected to.
-func (c *Client) Stream(event string, r io.Reader) error {
-	buf := make([]byte, c.streamBufferSize)
+func (c *Client) Stream(opts ClientStreamOptions) error {
+	if opts.Reader == nil {
+		return errors.New("ik: reader is nil")
+	}
+
+	if opts.ReadBufferSize <= 0 {
+		opts.ReadBufferSize = 1_024
+	}
+
+	buf := make([]byte, opts.ReadBufferSize)
 
 	for {
-		n, err := r.Read(buf)
+		n, err := opts.Reader.Read(buf)
 
 		if err != nil && err != io.EOF {
 			break
@@ -113,18 +132,42 @@ func (c *Client) Stream(event string, r io.Reader) error {
 
 		c.mu.Lock()
 
-		if err = c.sendEvent(event, buf[:n]); err != nil {
+		if err = c.sendEvent(opts.Event, buf[:n]); err != nil {
+			if err = c.w.Flush(); err != nil {
+				log.Printf("ik: failed to flush writer: %s", err)
+			}
+
 			return err
+		}
+
+		_, _, dataLength, err := readPacketMetadata(c.r)
+
+		if err != nil {
+			return err
+		}
+
+		res := make([]byte, dataLength)
+
+		if _, err = io.ReadFull(c.r, res); err != nil {
+			log.Printf("ik: failed to read stream response: %s\n", err)
+		}
+
+		if opts.Handler != nil {
+			opts.Handler(res)
 		}
 
 		c.mu.Unlock()
 
-		if n < c.streamBufferSize {
+		if n < opts.ReadBufferSize {
 			break
 		}
 	}
 
-	return nil
+	c.mu.Lock()
+
+	defer c.mu.Unlock()
+
+	return c.w.Flush()
 }
 
 // Connect connects the Client to the configured address via TCP.
@@ -171,20 +214,21 @@ func (c *Client) Close() error {
 }
 
 type ClientOptions struct {
-	// Addr is the TCP address to connect to.
+	// Addr is the address of the Server to connect to.
 	Addr string
-	// StreamBufferSize is the read buffer size used to created buffered reads for streams. Defaults to 1 KiB.
-	StreamBufferSize int
 }
 
-func NewClient(opts ClientOptions) *Client {
-	if opts.StreamBufferSize <= 0 {
-		opts.StreamBufferSize = 1_024
+func NewClient(opts *ClientOptions) *Client {
+	if opts == nil {
+		opts = &ClientOptions{}
+	}
+
+	if opts.Addr == "" {
+		opts.Addr = "localhost:48923"
 	}
 
 	return &Client{
-		addr:             opts.Addr,
-		subscribed:       make(chan bool, 1),
-		streamBufferSize: opts.StreamBufferSize,
+		addr:       opts.Addr,
+		subscribed: make(chan bool, 1),
 	}
 }

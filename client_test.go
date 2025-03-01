@@ -11,9 +11,8 @@ import (
 var event = "echo"
 var data = []byte("Hello, world!")
 
-var opts = ik.ClientOptions{
-	Addr:             addr,
-	StreamBufferSize: 1_024,
+var opts = &ik.ClientOptions{
+	Addr: addr,
 }
 
 func TestClient_Connect(t *testing.T) {
@@ -57,7 +56,14 @@ func TestClient_Stream(t *testing.T) {
 
 	r := bytes.NewBuffer(bytes.Repeat([]byte("Hello, world!\n"), 1_024))
 
-	if err := client.Stream("stream", r); err != nil {
+	if err := client.Stream(ik.ClientStreamOptions{
+		Event:          "stream",
+		Reader:         r,
+		ReadBufferSize: 1_024,
+		Handler: func(data []byte) {
+			fmt.Println(string(data))
+		},
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -90,13 +96,20 @@ func BenchmarkClient_Stream(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	buf := bytes.NewBuffer(bytes.Repeat([]byte("Hello, world!\n"), 1_024_000))
+	r := bytes.NewBuffer(bytes.Repeat([]byte("Hello, world!\n"), 1_024_000))
 
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for b.Loop() {
-		if err := client.Stream("stream", buf); err != nil {
+		if err := client.Stream(ik.ClientStreamOptions{
+			Event:          "stream",
+			Reader:         r,
+			ReadBufferSize: 1_024,
+			Handler: func(data []byte) {
+				fmt.Println(string(data))
+			},
+		}); err != nil {
 			b.Fatal(err)
 		}
 	}
