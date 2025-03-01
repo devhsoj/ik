@@ -15,7 +15,8 @@ type Client struct {
 	r    *bufio.Reader
 	mu   sync.Mutex
 
-	subscribed chan bool
+	subscribed       chan bool
+	streamBufferSize int
 }
 
 func (c *Client) sendPacket(event string, data []byte) error {
@@ -91,6 +92,36 @@ func (c *Client) Subscribe(event string, data []byte, handler func(data []byte))
 	return nil
 }
 
+func (c *Client) Stream(event string, r io.Reader) error {
+	buf := make([]byte, c.streamBufferSize)
+
+	for {
+		n, err := r.Read(buf)
+
+		if err != nil && err != io.EOF {
+			break
+		}
+
+		if n == 0 {
+			break
+		}
+
+		c.mu.Lock()
+
+		if err = c.sendPacket(event, buf[:n]); err != nil {
+			return err
+		}
+
+		c.mu.Unlock()
+
+		if n < c.streamBufferSize {
+			break
+		}
+	}
+
+	return nil
+}
+
 func (c *Client) Connect() error {
 	if c.conn != nil {
 		return nil
@@ -131,9 +162,19 @@ func (c *Client) Close() error {
 	return nil
 }
 
-func NewClient(addr string) *Client {
+type ClientOptions struct {
+	Addr             string
+	StreamBufferSize int
+}
+
+func NewClient(opts ClientOptions) *Client {
+	if opts.StreamBufferSize <= 0 {
+		opts.StreamBufferSize = 1_024
+	}
+
 	return &Client{
-		addr:       addr,
-		subscribed: make(chan bool, 1),
+		addr:             opts.Addr,
+		subscribed:       make(chan bool, 1),
+		streamBufferSize: opts.StreamBufferSize,
 	}
 }

@@ -3,11 +3,15 @@ package ik
 import (
 	"bufio"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 )
 
 const ProtoVersion byte = 2
+const MaxDataLength int = 1<<31 - 1
+
+var ErrDataTooLarge = errors.New("data too large, must be less than 2 GiB")
 
 func craftPacketMetadata(version byte, event string, dataLength int) []byte {
 	if len(event) > 255 {
@@ -65,6 +69,10 @@ func readPacketMetadata(r *bufio.Reader) (version byte, event string, dataLength
 }
 
 func sendPacket(w *bufio.Writer, version byte, event string, data []byte) error {
+	if len(data) > MaxDataLength {
+		return ErrDataTooLarge
+	}
+
 	buf := craftPacketMetadata(version, event, len(data))
 
 	if _, err := w.Write(buf); err != nil {

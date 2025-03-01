@@ -8,7 +8,6 @@ import (
 	"net"
 )
 
-var ErrDataMismatch = errors.New("ik: invalid data sent")
 var ErrEventNotRegistered = errors.New("ik: event not registered")
 
 type ServerClient struct {
@@ -22,7 +21,7 @@ func (s *ServerClient) Send(event string, data []byte) error {
 }
 
 func (s *ServerClient) Receive() (event string, data []byte, err error) {
-	var dataLength, n int
+	var dataLength int
 
 	_, event, dataLength, err = readPacketMetadata(s.r)
 
@@ -32,12 +31,8 @@ func (s *ServerClient) Receive() (event string, data []byte, err error) {
 
 	data = make([]byte, dataLength)
 
-	if n, err = io.ReadFull(s.r, data); err != nil {
+	if _, err = io.ReadFull(s.r, data); err != nil {
 		return "", nil, err
-	}
-
-	if n != dataLength {
-		err = ErrDataMismatch
 	}
 
 	return event, data, nil
@@ -72,11 +67,15 @@ func (s *Server) handleConn(conn net.Conn) error {
 
 		handler, ok := s.e[event]
 
-		if !ok {
+		if !ok || handler == nil {
 			return ErrEventNotRegistered
 		}
 
 		res := handler(client, data)
+
+		if res == nil {
+			continue
+		}
 
 		if err = client.Send(event, res); err != nil {
 			return err
@@ -110,6 +109,10 @@ func (s *Server) Listen(addr string) error {
 	s.l = l
 
 	return s.serve()
+}
+
+func (s *Server) Close() error {
+	return s.l.Close()
 }
 
 func NewServer() *Server {

@@ -48,3 +48,17 @@ func TestServer_RegisterSubscription(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestServer_RegisterStream(t *testing.T) {
+	server := ik.NewServer()
+
+	server.Register("stream", func(c *ik.ServerClient, data []byte) []byte {
+		fmt.Printf("got %d bytes\n", len(data))
+
+		return nil
+	})
+
+	if err := server.Listen(addr); err != nil {
+		t.Error(err)
+	}
+}
