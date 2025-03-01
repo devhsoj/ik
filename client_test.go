@@ -82,3 +82,22 @@ func BenchmarkClient_Send(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkClient_Stream(b *testing.B) {
+	client := ik.NewClient(opts)
+
+	if err := client.Connect(); err != nil {
+		b.Fatal(err)
+	}
+
+	buf := bytes.NewBuffer(bytes.Repeat([]byte("Hello, world!\n"), 1_024_000))
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for b.Loop() {
+		if err := client.Stream("stream", buf); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
