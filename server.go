@@ -78,10 +78,6 @@ func (s *Server) handleConn(conn net.Conn) error {
 
 		res := handler(client, data)
 
-		if res == nil {
-			continue
-		}
-
 		if err = client.Send(event, res); err != nil {
 			return err
 		}
