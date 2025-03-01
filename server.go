@@ -9,6 +9,8 @@ import (
 	"sync"
 )
 
+const errorEvent = "ik-error"
+
 var ErrEventNotRegistered = errors.New("ik: event not registered")
 
 // ServerClient is an abstraction around an underlying TCP net.Conn with a bufio.Reader and bufio.Writer.
@@ -87,7 +89,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 		handler, ok := s.e[event]
 
 		if !ok || handler == nil {
-			if err = client.Send("ik-error", []byte(ErrEventNotRegistered.Error())); err != nil {
+			if err = client.Send(errorEvent, []byte(ErrEventNotRegistered.Error())); err != nil {
 				return err
 			}
 

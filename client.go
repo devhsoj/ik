@@ -40,7 +40,7 @@ func (c *Client) Send(event string, data []byte) ([]byte, error) {
 
 	defer c.mu.Unlock()
 
-	_, _, dataLength, err := readPacketMetadata(c.r)
+	_, event, dataLength, err := readPacketMetadata(c.r)
 
 	if err != nil {
 		return nil, err
@@ -50,6 +50,10 @@ func (c *Client) Send(event string, data []byte) ([]byte, error) {
 
 	if _, err = io.ReadFull(c.r, buf); err != nil {
 		return nil, err
+	}
+
+	if event == errorEvent {
+		return nil, errors.New(string(buf))
 	}
 
 	return buf, nil
@@ -76,16 +80,21 @@ func (c *Client) Subscribe(event string, data []byte, handler func(data []byte))
 					break
 				}
 			default:
-				_, _, dataLength, err := readPacketMetadata(c.r)
+				_, event, dataLength, err := readPacketMetadata(c.r)
 
 				if err != nil {
-					log.Printf("ik: failed to read packet metadata on subscription to '%s': %v", event, err)
+					log.Printf("ik: failed to read packet metadata on subscription to '%s': %s", event, err)
 				}
 
 				buf := make([]byte, dataLength)
 
 				if _, err = io.ReadFull(c.r, buf); err != nil {
-					log.Printf("ik: failed to read packet data on subscription to '%s': %v", event, err)
+					log.Printf("ik: failed to read packet data on subscription to '%s': %s", event, err)
+				}
+
+				if event == errorEvent {
+					log.Printf("ik-error: %s", string(buf))
+					continue
 				}
 
 				handler(buf)
@@ -137,10 +146,12 @@ func (c *Client) Stream(opts ClientStreamOptions) error {
 				log.Printf("ik: failed to flush writer: %s", err)
 			}
 
+			c.mu.Unlock()
+
 			return err
 		}
 
-		_, _, dataLength, err := readPacketMetadata(c.r)
+		_, event, dataLength, err := readPacketMetadata(c.r)
 
 		if err != nil {
 			return err
@@ -150,6 +161,11 @@ func (c *Client) Stream(opts ClientStreamOptions) error {
 
 		if _, err = io.ReadFull(c.r, res); err != nil {
 			log.Printf("ik: failed to read stream response: %s\n", err)
+		}
+
+		if event == errorEvent {
+			c.mu.Unlock()
+			return errors.New(string(res))
 		}
 
 		if opts.Handler != nil {
