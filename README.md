@@ -4,6 +4,7 @@ ik is a simple, high performance, event-oriented TCP protocol & library.
 
 ## Features
 
+* Zero Dependencies!
 * Request / Response
 * Subscriptions
 * Streaming
