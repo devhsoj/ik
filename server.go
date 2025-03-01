@@ -6,25 +6,35 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 var ErrEventNotRegistered = errors.New("ik: event not registered")
 
 // ServerClient is an abstraction around an underlying TCP net.Conn with a bufio.Reader and bufio.Writer.
 type ServerClient struct {
-	c net.Conn
-	r *bufio.Reader
-	w *bufio.Writer
+	c  net.Conn
+	r  *bufio.Reader
+	w  *bufio.Writer
+	mu sync.Mutex
 }
 
 // Send sends the following event & data to the connected ServerClient.
 func (s *ServerClient) Send(event string, data []byte) error {
+	s.mu.Lock()
+
+	defer s.mu.Unlock()
+
 	return sendPacket(s.w, ProtoVersion, event, data)
 }
 
 // Receive returns the next event and data sent from the client.
 func (s *ServerClient) Receive() (event string, data []byte, err error) {
 	var dataLength int
+
+	s.mu.Lock()
+
+	defer s.mu.Unlock()
 
 	_, event, dataLength, err = readPacketMetadata(s.r)
 
