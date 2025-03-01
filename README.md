@@ -15,6 +15,8 @@ ik (short for intānettokomando) is a simple, high performance, event-oriented T
 go get github.com/devhsoj/ik
 ```
 
+More examples can be found in [examples/](https://github.com/devhsoj/ik/tree/master/examples/)
+
 **Server Example:**
 ```go
 package main
