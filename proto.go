@@ -16,7 +16,7 @@ protocol format:
 // ProtoVersion is the current version flag for the ik protocol.
 const ProtoVersion byte = 2
 
-// MaxDataLength is the maximum length of data allowed to be sent in one packet. ~ 2 GiB.
+// MaxDataLength is the maximum length of data allowed to be sent in one packet. 2 GiB.
 const MaxDataLength int = 1<<31 - 1
 
 var ErrDataTooLarge = errors.New("data too large, must be less than 2 GiB")

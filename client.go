@@ -19,7 +19,8 @@ type Client struct {
 	streamBufferSize int
 }
 
-func (c *Client) sendPacket(event string, data []byte) error {
+// sendEvent makes sure the Client is connected, then sends the passed event and data via sendPacket.
+func (c *Client) sendEvent(event string, data []byte) error {
 	if c.conn == nil {
 		if err := c.Connect(); err != nil {
 			return err
@@ -29,8 +30,9 @@ func (c *Client) sendPacket(event string, data []byte) error {
 	return sendPacket(c.w, ProtoVersion, event, data)
 }
 
+// Send sends the passed event and data, then returns a response from the Server the Client is connected to.
 func (c *Client) Send(event string, data []byte) ([]byte, error) {
-	if err := c.sendPacket(event, data); err != nil {
+	if err := c.sendEvent(event, data); err != nil {
 		return nil, err
 	}
 
@@ -53,8 +55,10 @@ func (c *Client) Send(event string, data []byte) ([]byte, error) {
 	return buf, nil
 }
 
+// Subscribe sends the passed event and data, locks the client, then via a go-routine, calls the passed handler with the
+// responses from the registered EventHandler from the Server the Client is connected to.
 func (c *Client) Subscribe(event string, data []byte, handler func(data []byte)) error {
-	if err := c.sendPacket(event, data); err != nil {
+	if err := c.sendEvent(event, data); err != nil {
 		return err
 	}
 
@@ -92,6 +96,7 @@ func (c *Client) Subscribe(event string, data []byte, handler func(data []byte))
 	return nil
 }
 
+// Stream pipes data read from the passed reader to the Server the Client is connected to.
 func (c *Client) Stream(event string, r io.Reader) error {
 	buf := make([]byte, c.streamBufferSize)
 
@@ -108,7 +113,7 @@ func (c *Client) Stream(event string, r io.Reader) error {
 
 		c.mu.Lock()
 
-		if err = c.sendPacket(event, buf[:n]); err != nil {
+		if err = c.sendEvent(event, buf[:n]); err != nil {
 			return err
 		}
 
@@ -122,6 +127,7 @@ func (c *Client) Stream(event string, r io.Reader) error {
 	return nil
 }
 
+// Connect connects the Client to the configured address via TCP.
 func (c *Client) Connect() error {
 	if c.conn != nil {
 		return nil
@@ -140,6 +146,8 @@ func (c *Client) Connect() error {
 	return nil
 }
 
+// Close closes the current subscription, attempts to lock the client, flushes all data to be written, then closes the
+// underlying TCP net.Conn.
 func (c *Client) Close() error {
 	c.subscribed <- false
 
@@ -163,7 +171,9 @@ func (c *Client) Close() error {
 }
 
 type ClientOptions struct {
-	Addr             string
+	// Addr is the TCP address to connect to.
+	Addr string
+	// StreamBufferSize is the read buffer size used to created buffered reads for streams. Defaults to 1 KiB.
 	StreamBufferSize int
 }
 

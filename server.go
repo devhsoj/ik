@@ -10,7 +10,7 @@ import (
 
 var ErrEventNotRegistered = errors.New("ik: event not registered")
 
-// ServerClient is an abstraction around an underlying net.Conn with a bufio.Reader and bufio.Writer.
+// ServerClient is an abstraction around an underlying TCP net.Conn with a bufio.Reader and bufio.Writer.
 type ServerClient struct {
 	c net.Conn
 	r *bufio.Reader
