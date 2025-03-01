@@ -87,6 +87,10 @@ func (s *Server) handleConn(conn net.Conn) error {
 		handler, ok := s.e[event]
 
 		if !ok || handler == nil {
+			if err = client.Send("ik-error", []byte(ErrEventNotRegistered.Error())); err != nil {
+				return err
+			}
+
 			return ErrEventNotRegistered
 		}
 
