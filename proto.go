@@ -8,11 +8,21 @@ import (
 	"io"
 )
 
+/*
+protocol format:
+<VERSION: 1b><EVENT NAME LENGTH: 1b><EVENT NAME: Xb><DATA LENGTH: 4b><DATA Xb>
+*/
+
+// ProtoVersion is the current version flag for the ik protocol.
 const ProtoVersion byte = 2
+
+// MaxDataLength is the maximum length of data allowed to be sent in one packet. ~ 2 GiB.
 const MaxDataLength int = 1<<31 - 1
 
 var ErrDataTooLarge = errors.New("data too large, must be less than 2 GiB")
 
+// craftPacketMetadata returns a buffer of metadata regarding a packet to be sent. This buffer contains a version byte,
+// an event name length byte, an event name, and the length of data to be sent.
 func craftPacketMetadata(version byte, event string, dataLength int) []byte {
 	if len(event) > 255 {
 		event = event[:255]
@@ -30,6 +40,7 @@ func craftPacketMetadata(version byte, event string, dataLength int) []byte {
 	return buf
 }
 
+// readPacketMetadata reads metadata in the format returned from craftPacketMetadata from the passed reader.
 func readPacketMetadata(r *bufio.Reader) (version byte, event string, dataLength int, err error) {
 	dataLengthBuf := make([]byte, 4)
 
@@ -68,6 +79,8 @@ func readPacketMetadata(r *bufio.Reader) (version byte, event string, dataLength
 	return version, string(eventBuf), int(dataLength_), nil
 }
 
+// sendPacket writes metadata from the given version, event, and data in the format returned from craftPacketMetadata
+// to the writer, then writes the passed data buf to the writer while flushing to assure it is 'sent'.
 func sendPacket(w *bufio.Writer, version byte, event string, data []byte) error {
 	if len(data) > MaxDataLength {
 		return ErrDataTooLarge
