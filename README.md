@@ -1,6 +1,6 @@
 # ik
 
-ik is a simple, high performance, event-oriented TCP protocol & library.
+ik (short for intānettokomando) is a simple, high performance, event-oriented TCP protocol & library.
 
 ## Features
 
