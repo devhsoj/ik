@@ -66,6 +66,10 @@ type Server struct {
 
 // Register registers an event handler func, triggered when a connected client sends this event.
 func (s *Server) Register(event string, handler EventHandler) {
+	if s.e == nil {
+		s.e = make(eventHandlerMap)
+	}
+
 	s.e.Register(event, handler)
 }
 
@@ -113,6 +117,10 @@ func (s *Server) serve() error {
 
 // Listen creates a TCP net.Listener listening on the passed addr and starts the server client connection serve loop.
 func (s *Server) Listen(addr string) error {
+	if s.e == nil {
+		s.e = make(eventHandlerMap)
+	}
+
 	l, err := net.Listen("tcp", addr)
 
 	if err != nil {
