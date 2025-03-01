@@ -10,16 +10,19 @@ import (
 
 var ErrEventNotRegistered = errors.New("ik: event not registered")
 
+// ServerClient is an abstraction around an underlying net.Conn with a bufio.Reader and bufio.Writer.
 type ServerClient struct {
 	c net.Conn
 	r *bufio.Reader
 	w *bufio.Writer
 }
 
+// Send sends the following event & data to the connected ServerClient.
 func (s *ServerClient) Send(event string, data []byte) error {
 	return sendPacket(s.w, ProtoVersion, event, data)
 }
 
+// Receive returns the next event and data sent from the client.
 func (s *ServerClient) Receive() (event string, data []byte, err error) {
 	var dataLength int
 
@@ -51,10 +54,12 @@ type Server struct {
 	e eventHandlerMap
 }
 
+// Register registers an event handler func, triggered when a connected client sends this event.
 func (s *Server) Register(event string, handler EventHandler) {
 	s.e.Register(event, handler)
 }
 
+// handleConn handles each client connection by repeatedly reading events and calling the registered event handler.
 func (s *Server) handleConn(conn net.Conn) error {
 	client := NewServerClient(conn)
 
@@ -83,6 +88,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 	}
 }
 
+// serve accepts TCP connections and passes them to handleConn.
 func (s *Server) serve() error {
 	for {
 		conn, err := s.l.Accept()
@@ -99,6 +105,7 @@ func (s *Server) serve() error {
 	}
 }
 
+// Listen creates a TCP net.Listener listening on the passed addr and starts the server client connection serve loop.
 func (s *Server) Listen(addr string) error {
 	l, err := net.Listen("tcp", addr)
 
@@ -111,6 +118,7 @@ func (s *Server) Listen(addr string) error {
 	return s.serve()
 }
 
+// Close closes the underlying TCP listener.
 func (s *Server) Close() error {
 	return s.l.Close()
 }
