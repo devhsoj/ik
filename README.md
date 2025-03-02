@@ -6,7 +6,6 @@ ik (short for intānettokomando) is a simple, high performance, event-oriented T
 
 * Zero Dependencies!
 * Request / Response
-* Subscriptions
 * Streaming
 
 ## Getting Started
@@ -47,7 +46,7 @@ import (
 )
 
 func main() {
-    client := ik.NewClient(ik.ClientOptions{
+    client := ik.NewClient(&ik.ClientOptions{
         Addr: "localhost:3000",
     })
 
