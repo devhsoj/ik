@@ -59,52 +59,6 @@ func (c *Client) Send(event string, data []byte) ([]byte, error) {
 	return buf, nil
 }
 
-// Subscribe sends the passed event and data, locks the client, then via a go-routine, calls the passed handler with the
-// responses from the registered EventHandler from the Server the Client is connected to.
-func (c *Client) Subscribe(event string, data []byte, handler func(data []byte)) error {
-	if err := c.sendEvent(event, data); err != nil {
-		return err
-	}
-
-	c.mu.Lock()
-
-	defer c.mu.Unlock()
-
-	c.subscribed <- true
-
-	go func() {
-		for {
-			select {
-			case subscribed := <-c.subscribed:
-				if !subscribed {
-					break
-				}
-			default:
-				_, event, dataLength, err := readPacketMetadata(c.r)
-
-				if err != nil {
-					log.Printf("ik: failed to read packet metadata on subscription to '%s': %s", event, err)
-				}
-
-				buf := make([]byte, dataLength)
-
-				if _, err = io.ReadFull(c.r, buf); err != nil {
-					log.Printf("ik: failed to read packet data on subscription to '%s': %s", event, err)
-				}
-
-				if event == errorEvent {
-					log.Printf("ik-error: %s", string(buf))
-					continue
-				}
-
-				handler(buf)
-			}
-		}
-	}()
-
-	return nil
-}
-
 type ClientStreamOptions struct {
 	// Event is the event to specify this stream for.
 	Event string

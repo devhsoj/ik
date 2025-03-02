@@ -93,7 +93,7 @@ func (s *Server) handleConn(conn net.Conn) error {
 				return err
 			}
 
-			return ErrEventNotRegistered
+			continue
 		}
 
 		res := handler(client, data)

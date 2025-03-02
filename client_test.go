@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/devhsoj/ik"
 	"testing"
-	"time"
 )
 
 var event = "echo"
@@ -33,22 +32,6 @@ func TestClient_Send(t *testing.T) {
 	}
 
 	fmt.Println(string(res))
-}
-
-func TestClient_Subscribe(t *testing.T) {
-	client := ik.NewClient(opts)
-
-	if err := client.Subscribe("subscribe", nil, func(data []byte) {
-		fmt.Println(string(data))
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	time.Sleep(time.Second * 10)
-
-	if err := client.Close(); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestClient_Stream(t *testing.T) {
