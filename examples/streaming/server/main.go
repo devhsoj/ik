@@ -9,8 +9,8 @@ import (
 func main() {
 	server := ik.NewServer()
 
-	server.Register("stdout-stream", func(c *ik.ServerClient, buf []byte) []byte {
-		n, err := os.Stdout.Write(buf)
+	server.Register("stdout-stream", func(c *ik.ServerClient, data []byte) []byte {
+		n, err := os.Stdout.Write(data)
 
 		if err != nil {
 			return []byte(fmt.Sprintf("failed to write to stdout: %s\n", err))
