@@ -53,6 +53,21 @@ func (s *ServerClient) Receive() (event string, data []byte, err error) {
 	return event, data, nil
 }
 
+// Close closes the underlying net.Conn.
+func (s *ServerClient) Close() error {
+	return s.c.Close()
+}
+
+// LocalAddr returns the local ip address of the underlying ServerClient's net.Conn.
+func (s *ServerClient) LocalAddr() net.Addr {
+	return s.c.LocalAddr()
+}
+
+// RemoteAddr returns the remote ip address of the underlying ServerClient's net.Conn.
+func (s *ServerClient) RemoteAddr() net.Addr {
+	return s.c.RemoteAddr()
+}
+
 func NewServerClient(c net.Conn) *ServerClient {
 	return &ServerClient{
 		c: c,
