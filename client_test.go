@@ -39,14 +39,7 @@ func TestClient_Stream(t *testing.T) {
 
 	r := bytes.NewBuffer(bytes.Repeat([]byte("Hello, world!\n"), 1_024))
 
-	if err := client.Stream(ik.ClientStreamOptions{
-		Event:          "stream",
-		Reader:         r,
-		ReadBufferSize: 1_024,
-		Handler: func(data []byte) {
-			fmt.Println(string(data))
-		},
-	}); err != nil {
+	if err := client.Stream("stream", r); err != nil {
 		t.Fatal(err)
 	}
 
@@ -85,14 +78,7 @@ func BenchmarkClient_Stream(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		if err := client.Stream(ik.ClientStreamOptions{
-			Event:          "stream",
-			Reader:         r,
-			ReadBufferSize: 1_024,
-			Handler: func(data []byte) {
-				fmt.Println(string(data))
-			},
-		}); err != nil {
+		if err := client.Stream("stream", r); err != nil {
 			b.Fatal(err)
 		}
 	}
