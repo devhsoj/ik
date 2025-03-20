@@ -16,14 +16,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := client.Stream(ik.ClientStreamOptions{
-		Event:          "stdout-stream",
-		Reader:         os.Stdin,
-		ReadBufferSize: 8_192,
-		Handler: func(data []byte) {
-			fmt.Println(string(data))
-		},
-	}); err != nil {
+	if err := client.Stream("stdout-stream", os.Stdin); err != nil {
 		fmt.Printf("failed to stream: %s\n", err)
 		os.Exit(1)
 	}

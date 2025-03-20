@@ -15,8 +15,6 @@ type Client struct {
 	w    *bufio.Writer
 	r    *bufio.Reader
 	mu   sync.Mutex
-
-	subscribed chan bool
 }
 
 // sendEvent makes sure the Client is connected, then sends the passed event and data via sendPacket.
@@ -59,31 +57,18 @@ func (c *Client) Send(event string, data []byte) ([]byte, error) {
 	return buf, nil
 }
 
-type ClientStreamOptions struct {
-	// Event is the event to specify this stream for.
-	Event string
-	// Reader is the reader that will stream to the Server the Client is connected to.
-	Reader io.Reader
-	// ReadBufferSize is the read buffer size used to created buffered reads for streams. Defaults to 1 KiB.
-	ReadBufferSize int
-	// Handler is a function that is called when a response is received from the Server the Client is streaming to.
-	Handler func(data []byte)
-}
+const streamReadBufferSize = 1_024
 
 // Stream pipes data read from the passed reader to the Server the Client is connected to.
-func (c *Client) Stream(opts ClientStreamOptions) error {
-	if opts.Reader == nil {
+func (c *Client) Stream(event string, r io.Reader) error {
+	if r == nil {
 		return errors.New("ik: reader is nil")
 	}
 
-	if opts.ReadBufferSize <= 0 {
-		opts.ReadBufferSize = 1_024
-	}
-
-	buf := make([]byte, opts.ReadBufferSize)
+	buf := make([]byte, streamReadBufferSize)
 
 	for {
-		n, err := opts.Reader.Read(buf)
+		n, err := r.Read(buf)
 
 		if err != nil && err != io.EOF {
 			break
@@ -95,7 +80,7 @@ func (c *Client) Stream(opts ClientStreamOptions) error {
 
 		c.mu.Lock()
 
-		if err = c.sendEvent(opts.Event, buf[:n]); err != nil {
+		if err = c.sendEvent(event, buf[:n]); err != nil {
 			if err = c.w.Flush(); err != nil {
 				log.Printf("ik: failed to flush writer: %s", err)
 			}
@@ -122,13 +107,9 @@ func (c *Client) Stream(opts ClientStreamOptions) error {
 			return errors.New(string(res))
 		}
 
-		if opts.Handler != nil {
-			opts.Handler(res)
-		}
-
 		c.mu.Unlock()
 
-		if n < opts.ReadBufferSize {
+		if n < streamReadBufferSize {
 			break
 		}
 	}
@@ -162,8 +143,6 @@ func (c *Client) Connect() error {
 // Close closes the current subscription, attempts to lock the client, flushes all data to be written, then closes the
 // underlying TCP net.Conn.
 func (c *Client) Close() error {
-	c.subscribed <- false
-
 	c.mu.Lock()
 
 	defer c.mu.Unlock()
@@ -198,7 +177,6 @@ func NewClient(opts *ClientOptions) *Client {
 	}
 
 	return &Client{
-		addr:       opts.Addr,
-		subscribed: make(chan bool, 1),
+		addr: opts.Addr,
 	}
 }
